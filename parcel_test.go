@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,9 +33,7 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
@@ -54,6 +53,7 @@ func TestAddGetDelete(t *testing.T) {
 	require.Equal(t, parcel.Status, storedParsel.Status)
 	require.Equal(t, parcel.Address, storedParsel.Address)
 	require.Equal(t, parcel.CreatedAt, storedParsel.CreatedAt)
+	require.Equal(t, parcel.Number, storedParsel.Number)
 
 	// delete
 	// удалите добавленную посылку, убедитесь в отсутствии ошибки
@@ -61,7 +61,8 @@ func TestAddGetDelete(t *testing.T) {
 	err = store.Delete(id)
 	require.NoError(t, err)
 	_, err = store.Get(id)
-	require.Error(t, err)
+	assert.Error(t, err)
+
 }
 
 // TestSetAddress проверяет обновление адреса
@@ -92,6 +93,9 @@ func TestSetAddress(t *testing.T) {
 
 	err = store.SetAddress(id, newAddress)
 	require.NoError(t, err)
+	storedParcel, err := store.Get(id)
+	assert.NoError(t, err)
+	assert.Equal(t, newAddress, storedParcel.Address)
 }
 
 // TestSetStatus проверяет обновление статуса
@@ -117,8 +121,8 @@ func TestSetStatus(t *testing.T) {
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
 	updatedParcel, err := store.Get(id)
-	require.NoError(t, err)
-	require.Equal(t, newStatus, updatedParcel.Status)
+	assert.NoError(t, err)
+	assert.Equal(t, newStatus, updatedParcel.Status)
 }
 
 // TestGetByClient проверяет получение посылок по идентификатору клиента
@@ -162,7 +166,7 @@ func TestGetByClient(t *testing.T) {
 	// убедитесь в отсутствии ошибки
 	require.NoError(t, err)
 	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
-	require.Equal(t, len(parcels), len(storedParcels))
+	assert.Len(t, storedParcels, len(parcels))
 
 	// check
 	for _, parcel := range storedParcels {
@@ -175,5 +179,6 @@ func TestGetByClient(t *testing.T) {
 		require.Equal(t, expectedParcel.Status, parcel.Status)
 		require.Equal(t, expectedParcel.Address, parcel.Address)
 		require.Equal(t, expectedParcel.CreatedAt, parcel.CreatedAt)
+		require.Equal(t, expectedParcel.Number, parcel.Number)
 	}
 }
